@@ -38,6 +38,18 @@ if (NOT ORIGIN_EXT2FS)
     set_target_properties(overlaybd-resize PROPERTIES INSTALL_RPATH "/opt/overlaybd/lib")
 endif()
 
+if(BUILD_STATIC_TOOLS)
+    foreach(tool
+        overlaybd-commit
+        overlaybd-create
+        overlaybd-apply
+        overlaybd-resize
+    )
+        target_link_options(${tool} PRIVATE -static)
+        target_link_libraries(${tool} ${STATIC_TOOL_LINK_LIBRARIES})
+    endforeach()
+endif()
+
 install(TARGETS
     overlaybd-commit
     overlaybd-create

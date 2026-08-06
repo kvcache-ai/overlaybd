@@ -381,8 +381,8 @@ class LevelIndex : public Index {
 public:
     vector<vector<uint64_t>> level_mapping;
     static const uint16_t LEVEL_LSHIFT = 9;
-    static const uint16_t PAGE_SIZE = (1 << LEVEL_LSHIFT) * sizeof(uint64_t);
-    // LSHIFT = 6 --> PAGE_SIZE = 256, LSHIFT = 9 --> PAGE_SIZE = 4096
+    static const uint16_t INDEX_PAGE_SIZE = (1 << LEVEL_LSHIFT) * sizeof(uint64_t);
+    // LSHIFT = 6 --> INDEX_PAGE_SIZE = 256, LSHIFT = 9 --> INDEX_PAGE_SIZE = 4096
     LevelIndex(const SegmentMapping *pmappings = nullptr, size_t n = 0, bool ownership = true)
         : Index(pmappings, n, ownership) {
         build_level_index((uint8_t *)pbegin, (uint8_t *)pend, sizeof(SegmentMapping), 0);
@@ -406,7 +406,7 @@ public:
     void build_level_index(uint8_t *begin, uint8_t *end, size_t obj_size, int depth) {
         if (begin == nullptr)
             return;
-        int page_size = PAGE_SIZE / obj_size;
+        int page_size = INDEX_PAGE_SIZE / obj_size;
         auto n = (end - begin) / obj_size;
         LOG_DEBUG("level ` offset size(`)", depth, (n - 1) / page_size + 1);
         auto extent_size = (n - 1) / page_size + 1;
@@ -420,7 +420,7 @@ public:
             }
             extent[p++] = *(uint64_t *)ptr;
         }
-        if (extent_size > PAGE_SIZE / sizeof(uint64_t)) {
+        if (extent_size > INDEX_PAGE_SIZE / sizeof(uint64_t)) {
             build_level_index((uint8_t *)&extent[0], (uint8_t *)(&extent[0] + extent_size),
                               sizeof(uint64_t), depth + 1);
         }

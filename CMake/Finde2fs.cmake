@@ -13,7 +13,24 @@ if(NOT ORIGIN_EXT2FS)
         set(LIBEXT2FS_INSTALL_DIR ${e2fsprogs_SOURCE_DIR}/build/libext2fs CACHE STRING "")
         set(E2FS_RESIZE_DIR ${e2fsprogs_SOURCE_DIR}/build/resize CACHE STRING "path to e2fsprogs resize build dir")
         set(E2FS_INSTALL_LIB_DIR ${LIBEXT2FS_INSTALL_DIR}/lib CACHE STRING "path to e2fsprogs install-libs output")
+    endif()
 
+    set(E2FS_COM_ERR_LIBRARY ${e2fsprogs_SOURCE_DIR}/build/lib/libcom_err.a)
+    if(BUILD_STATIC_TOOLS)
+        set(E2FS_LIBRARY ${e2fsprogs_SOURCE_DIR}/build/lib/libext2fs.a)
+        set(E2FS_BUILD_OUTPUTS
+            ${E2FS_LIBRARY}
+            ${E2FS_COM_ERR_LIBRARY}
+            ${E2FS_RESIZE_DIR}/resize2fs.o
+            ${E2FS_RESIZE_DIR}/extent.o
+            ${E2FS_RESIZE_DIR}/resource_track.o
+        )
+    else()
+        set(E2FS_LIBRARY ${LIBEXT2FS_INSTALL_DIR}/lib/libext2fs.so)
+        set(E2FS_BUILD_OUTPUTS ${LIBEXT2FS_INSTALL_DIR}/lib)
+    endif()
+
+    if(NOT TARGET libext2fs_build)
         # Force the e2fsprogs autotools build to use C11. GCC 15 (Azure Linux
         # 4.0) defaults to C23, under which `typedef int bool;` in
         # lib/ext2fs/tdb.c is illegal because `bool` is now a keyword. The
@@ -22,16 +39,14 @@ if(NOT ORIGIN_EXT2FS)
         # build.sh in place instead. `-std=gnu11` is supported by every
         # compiler used across the release matrix (GCC 7+).
         add_custom_command(
-            OUTPUT ${LIBEXT2FS_INSTALL_DIR}/lib
+            OUTPUT ${E2FS_BUILD_OUTPUTS}
             WORKING_DIRECTORY ${e2fsprogs_SOURCE_DIR}
             COMMAND chmod 755 build.sh && sed -i 's|CFLAGS="-fPIC -O3"|CFLAGS="-fPIC -O3 -std=gnu11"|' build.sh && ./build.sh
         )
-        add_custom_target(libext2fs_build DEPENDS ${LIBEXT2FS_INSTALL_DIR}/lib)
+        add_custom_target(libext2fs_build DEPENDS ${E2FS_BUILD_OUTPUTS})
     endif()
 
     set(E2FS_FOUND yes)
-    set(E2FS_LIBRARY ${LIBEXT2FS_INSTALL_DIR}/lib/libext2fs.so)
-    set(E2FS_COM_ERR_LIBRARY ${e2fsprogs_SOURCE_DIR}/build/lib/libcom_err.a)
     set(E2FS_LIBRARIES ${E2FS_LIBRARY} ${E2FS_COM_ERR_LIBRARY})
     set(E2FS_INCLUDE_DIR ${LIBEXT2FS_INSTALL_DIR}/include)
     set(E2FS_INCLUDE_DIRS ${E2FS_INCLUDE_DIR})

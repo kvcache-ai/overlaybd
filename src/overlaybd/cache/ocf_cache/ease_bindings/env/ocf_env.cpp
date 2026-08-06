@@ -1,7 +1,10 @@
 #include <photon/thread/thread.h>
 #include <photon/common/alog.h>
 
+#if __has_include(<execinfo.h>)
 #include <execinfo.h>
+#define OVERLAYBD_HAVE_EXECINFO
+#endif
 #include <sched.h>
 
 extern "C" {
@@ -107,6 +110,7 @@ void env_allocator_destroy(env_allocator *allocator)
 
 void env_stack_trace(void)
 {
+#ifdef OVERLAYBD_HAVE_EXECINFO
 	void *trace[ENV_TRACE_DEPTH];
 	char **messages = NULL;
 	int i, size;
@@ -118,6 +122,9 @@ void env_stack_trace(void)
 		printf("%s\n", messages[i]);
 	printf("<<<[stack trace]\n");
 	free(messages);
+#else
+	printf("[stack trace unavailable]\n");
+#endif
 }
 
 /* CRC */
