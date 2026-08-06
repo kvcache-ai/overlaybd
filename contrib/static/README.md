@@ -25,6 +25,8 @@ docker buildx build \
 ```
 
 The `Static CLI` workflow validates both `linux/amd64` and `linux/arm64` on pull
-requests. Pushing a tag named `static-v<version>` publishes both archives and their
-checksum files as a GitHub release. The `static-` prefix keeps this release path
-separate from the existing distro-package workflow, which uses `v*` tags.
+requests. After the change is merged, pushing a tag named `static-v<version>` at a
+commit contained in `origin/main` publishes both archives and their checksum files
+as a GitHub release. A tag on an unmerged commit fails before the Docker build starts.
+The `static-` prefix keeps this release path separate from the existing
+distro-package workflow, which uses `v*` tags.
