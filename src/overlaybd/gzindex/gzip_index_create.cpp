@@ -18,6 +18,7 @@
 #include <string.h>
 #include <zlib.h>
 #include <sys/fcntl.h>
+#include <sys/stat.h>
 
 #include "gzfile_index.h"
 

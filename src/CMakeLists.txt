@@ -3,6 +3,12 @@ find_package(OpenSSL REQUIRED)
 find_package(aio REQUIRED)
 find_package(RapidJSON REQUIRED MODULE)
 
+if(BUILD_STATIC_TOOLS)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(CURL_PC REQUIRED libcurl)
+    set(STATIC_TOOL_LINK_LIBRARIES ${CURL_PC_STATIC_LDFLAGS})
+endif()
+
 link_libraries(rt pthread resolv)
 
 add_subdirectory(overlaybd)
@@ -45,32 +51,34 @@ if (NOT ORIGIN_EXT2FS)
     add_dependencies(overlaybd_image_lib libext2fs_build)
 endif()
 
-add_executable(overlaybd-tcmu
-  main.cpp
-)
-target_include_directories(overlaybd-tcmu PUBLIC
-  ${TCMU_INCLUDE_DIR}
-  ${CURL_INCLUDE_DIRS}
-  ${OPENSSL_INCLUDE_DIR}
-  ${RAPIDJSON_INCLUDE_DIRS}
-  ${PHOTON_INCLUDE_DIR}
-)
-target_link_libraries(overlaybd-tcmu
-  photon_static
-  overlaybd_lib
-  overlaybd_image_lib
-  tcmu_static
-  ${CURL_LIBRARIES}
-  ${OPENSSL_SSL_LIBRARY}
-  ${OPENSSL_CRYPTO_LIBRARY}
-  ${AIO_LIBRARIES}
-)
+if(BUILD_TCMU)
+  add_executable(overlaybd-tcmu
+    main.cpp
+  )
+  target_include_directories(overlaybd-tcmu PUBLIC
+    ${TCMU_INCLUDE_DIR}
+    ${CURL_INCLUDE_DIRS}
+    ${OPENSSL_INCLUDE_DIR}
+    ${RAPIDJSON_INCLUDE_DIRS}
+    ${PHOTON_INCLUDE_DIR}
+  )
+  target_link_libraries(overlaybd-tcmu
+    photon_static
+    overlaybd_lib
+    overlaybd_image_lib
+    tcmu_static
+    ${CURL_LIBRARIES}
+    ${OPENSSL_SSL_LIBRARY}
+    ${OPENSSL_CRYPTO_LIBRARY}
+    ${AIO_LIBRARIES}
+  )
 
-install(TARGETS overlaybd-tcmu DESTINATION /opt/overlaybd/bin)
-install(FILES example_config/overlaybd-tcmu.service DESTINATION /opt/overlaybd/)
+  install(TARGETS overlaybd-tcmu DESTINATION /opt/overlaybd/bin)
+  install(FILES example_config/overlaybd-tcmu.service DESTINATION /opt/overlaybd/)
+endif()
 install(FILES example_config/overlaybd.json DESTINATION /etc/overlaybd/)
 install(FILES example_config/cred.json DESTINATION /opt/overlaybd/)
-if (NOT ORIGIN_EXT2FS)
+if (NOT ORIGIN_EXT2FS AND NOT BUILD_STATIC_TOOLS)
     install(DIRECTORY ${LIBEXT2FS_INSTALL_DIR}/lib DESTINATION /opt/overlaybd/ USE_SOURCE_PERMISSIONS)
 endif()
 

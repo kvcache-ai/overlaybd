@@ -1,0 +1,38 @@
+--- a/fs/extfs/extfs.cpp
++++ b/fs/extfs/extfs.cpp
+@@ -20,0 +21 @@
++#include <sys/stat.h>
+--- a/fs/extfs/mkfs.cpp
++++ b/fs/extfs/mkfs.cpp
+@@ -26,0 +27 @@
++#include <sys/stat.h>
+--- a/io/aio-wrapper.cpp
++++ b/io/aio-wrapper.cpp
+@@ -216 +216 @@
+-        static void aio_completion_handler( sigval_t sigval )
++        static void aio_completion_handler(union sigval sigval)
+--- a/thread/thread.cpp
++++ b/thread/thread.cpp
+@@ -91 +91 @@
+-static constexpr size_t PAGE_SIZE = 1 << 12;
++static constexpr size_t PHOTON_STACK_PAGE_SIZE = 1 << 12;
+@@ -133 +133 @@
+-        int err = posix_memalign((void**)&ptr, PAGE_SIZE, stack_size);
++        int err = posix_memalign((void**)&ptr, PHOTON_STACK_PAGE_SIZE, stack_size);
+@@ -931 +931 @@
+-        stack_size = align_up(randomizer + stack_size + sizeof(thread), PAGE_SIZE);
++        stack_size = align_up(randomizer + stack_size + sizeof(thread), PHOTON_STACK_PAGE_SIZE);
+@@ -1349 +1349 @@
+-        auto len = align_down(rsp - buf, PAGE_SIZE);
++        auto len = align_down(rsp - buf, PHOTON_STACK_PAGE_SIZE);
+--- a/common/utility.cpp
++++ b/common/utility.cpp
+@@ -17,0 +18 @@
++#if __has_include(<execinfo.h>)
+@@ -18,0 +20,2 @@
++#define PHOTON_HAVE_EXECINFO
++#endif
+@@ -61,0 +65 @@
++#ifdef PHOTON_HAVE_EXECINFO
+@@ -70,0 +75 @@
++#endif

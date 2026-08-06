@@ -16,6 +16,7 @@
 
 #include "gz.h"
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <zlib.h>
 #include <photon/common/alog.h>
 #include <photon/common/alog-stdstring.h>

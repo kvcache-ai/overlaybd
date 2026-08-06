@@ -1,0 +1,125 @@
+name: Static CLI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/static-release.yml"
+      - "CMake/**"
+      - "CMakeLists.txt"
+      - "contrib/static/**"
+      - "src/**"
+  push:
+    tags:
+      - "static-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: aarch64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify release source
+        if: startsWith(github.ref, 'refs/tags/static-v')
+        shell: bash
+        run: |
+          git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "::error title=Unmerged release source::Static release tags must point to a commit on origin/main."
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Set version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/static-v* ]]; then
+            release_version="${GITHUB_REF_NAME#static-}"
+          else
+            release_version="dev-${GITHUB_SHA::12}"
+          fi
+          echo "release_version=${release_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build and test
+        shell: bash
+        run: |
+          mkdir -p dist
+          docker buildx build \
+            --platform "${{ matrix.platform }}" \
+            --build-arg BUILDER_IMAGE=public.ecr.aws/docker/library/alpine:3.22 \
+            --build-arg RELEASE_VERSION="${{ steps.version.outputs.release_version }}" \
+            --build-arg SOURCE_COMMIT="${GITHUB_SHA}" \
+            --file contrib/static/Dockerfile \
+            --output type=local,dest=dist \
+            .
+
+      - name: Verify archive
+        shell: bash
+        run: |
+          cd dist
+          sha256sum -c ./*.sha256
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: overlaybd-static-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/static-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download archives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: overlaybd-static-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          release_version="${GITHUB_REF_NAME#static-}"
+          cat > "${RUNNER_TEMP}/release-notes.md" <<EOF
+          Statically linked OverlayBD CLI tools for Linux x86_64 and aarch64.
+
+          Included tools: overlaybd-create, overlaybd-apply, overlaybd-commit, and overlaybd-resize.
+
+          Source commit: ${GITHUB_SHA}
+          EOF
+          gh release create "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.sha256 \
+            --verify-tag \
+            --title "Static OverlayBD tools ${release_version}" \
+            --notes-file "${RUNNER_TEMP}/release-notes.md"
